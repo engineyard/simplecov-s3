@@ -37,6 +37,7 @@ describe SimpleCov::S3 do
     cov2 = SimpleCov::S3.new(cov_opts.merge(:job_id => "457", :build_unit => "6"))
     cov2.push_partial(:debug => true)
     cov2.pull_merge_and_push_full
+    cov2.push_full
     #TODO: assert on the resulting contents of S3?
   end
 

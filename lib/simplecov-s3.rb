@@ -83,6 +83,11 @@ module SimpleCov
       push_coverage_to("#{@project_name}-#{Time.now.to_i}-coverageRESULT/#{SecureRandom.urlsafe_base64(33)}", gen_body(result), result.covered_percent, @postback_url)
     end
 
+    def push_full
+      result = SimpleCov::ResultMerger.merged_result
+      push_coverage_to("#{@project_name}-#{Time.now.to_i}-coverageRESULT/#{SecureRandom.urlsafe_base64(33)}", gen_body(result), result.covered_percent, @postback_url)
+    end
+
     private
 
     def put_file(path, data)
