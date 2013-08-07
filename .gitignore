@@ -1,0 +1,8 @@
+.DS_Store
+*.gem
+.bundle
+Gemfile.lock
+EYIntegratedGemfile.lock
+pkg/*
+.rvmrc
+coverage
