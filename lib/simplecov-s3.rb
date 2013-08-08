@@ -37,7 +37,11 @@ module SimpleCov
       @build_unit = opts[:build_unit]
       @build_id = opts[:build_id]
       @job_id = opts[:job_id]
-      @project_name = opts[:project_name]
+      @project_name = opts[:project_name] || "unknown"
+      if @project_name.empty?
+        @project_name = "unknown"
+      end
+      @history_limit = opts[:history_limit] || 15
     end
 
     def push_partial(opts = {})
@@ -81,14 +85,27 @@ module SimpleCov
       end
       result = SimpleCov::Result.new(merged)
       push_coverage_to("#{@project_name}-#{Time.now.to_i}-coverageRESULT/#{SecureRandom.urlsafe_base64(33)}", gen_body(result), result.covered_percent, @postback_url)
+      cleanup_files
     end
 
     def push_full
       result = SimpleCov::ResultMerger.merged_result
       push_coverage_to("#{@project_name}-#{Time.now.to_i}-coverageRESULT/#{SecureRandom.urlsafe_base64(33)}", gen_body(result), result.covered_percent, @postback_url)
+      cleanup_files
     end
 
     private
+
+    def cleanup_files
+      json_files.each(&:destroy)
+      all_files = @connection.directories.get(@bucket_name, :prefix => @project_name).files
+      if all_files.size > @history_limit
+        all_files.sort_by(&:last_modified)[0,all_files.size - @history_limit].each do |f|
+          puts "Cleaning up #{f.key}"
+          f.destroy
+        end
+      end
+    end
 
     def put_file(path, data)
       puts "Putting to #{path} data size #{data.size}"
