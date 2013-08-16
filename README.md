@@ -96,7 +96,7 @@ Rakefile (advanced, merge build units across worker boxes)
     #ignore generated coverage results
     coverage
 
-Sample S3 Bucket policy to allow the "\<user\>" user of from the Amazon Account ID "\<awsaccount\>" access to read/write from the "<bucket>" bucket, while the public is allowed read-only:
+Sample S3 Bucket policy to allow the "\<user\>" user of from the Amazon Account ID "\<awsaccount\>" access to read/write from the "\<bucket\>" bucket, while the public is allowed read-only:
 
     {
       "Version": "2008-10-17",
