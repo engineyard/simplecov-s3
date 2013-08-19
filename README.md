@@ -2,7 +2,7 @@
 
 Sample Usage:
 
-Gemile
+Gemfile
 
     group :test do
       gem 'simplecov-s3'
