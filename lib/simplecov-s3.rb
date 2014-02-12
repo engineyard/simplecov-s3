@@ -142,6 +142,25 @@ module SimpleCov
           :headers => { "Content-Type" => "application/x-www-form-urlencoded" })
         puts result.inspect
       end
+      repush_assets_if_needed
+    end
+
+    def repush_assets_if_needed
+      #check: @connection.directories.get(@bucket_name, prefix: "assets/0.7.1").files.size
+      local_assets_are_in = SimpleCov::Formatter::HTMLFormatter.new.send(:asset_output_path)
+      asset_dir_needed = local_assets_are_in.split("/").last
+      if @connection.directories.get(@bucket_name, prefix: "assets/#{asset_dir_needed}").files.size == 0
+        puts "No assets directory on s3 found. Re-pushing!"
+        Dir.glob("#{local_assets_are_in}/**/*").each do |file|
+          unless File.directory?(file)
+            path = "assets/#{asset_dir_needed}" + file[local_assets_are_in.size..-1]
+            data = File.read(file)
+            puts "pushing asset to #{path} sized #{data.size}"
+            @connection.directories.get(@bucket_name).files.create(:key => path, :body => data)
+          end
+        end
+        puts "asset push completed"
+      end
     end
 
     def commit_time
