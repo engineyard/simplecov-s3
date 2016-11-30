@@ -17,6 +17,6 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   s.add_development_dependency 'rspec'
-  s.add_dependency "fog"
+  s.add_dependency "fog-aws"
   s.add_dependency 'simplecov'
 end

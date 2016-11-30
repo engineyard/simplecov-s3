@@ -1,7 +1,7 @@
 require 'digest'
 require 'securerandom'
 require 'excon'
-require 'fog'
+require 'fog/aws'
 require 'simplecov'
 require 'json'
 
