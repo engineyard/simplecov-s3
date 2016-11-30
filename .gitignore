@@ -3,6 +3,7 @@
 .bundle
 Gemfile.lock
 EYIntegratedGemfile.lock
+knapsack_rspec_report.json
 pkg/*
 .rvmrc
 coverage

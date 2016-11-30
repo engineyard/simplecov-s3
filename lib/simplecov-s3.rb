@@ -32,7 +32,10 @@ module SimpleCov
       @shared_secret = opts[:shared_secret]
       @assets_url = opts[:assets_url]
       @bucket_name = opts[:bucket_name]
-      @build_units = opts[:build_units]
+      @build_units = opts[:build_units].to_i
+      if @build_units <= 1
+        raise "Missing build_units in config (need a value greater than 0)"
+      end
       @postback_url = opts[:postback_url]
       @build_unit = opts[:build_unit]
       @build_id = opts[:build_id]
@@ -41,7 +44,8 @@ module SimpleCov
       if @project_name.empty?
         @project_name = "unknown"
       end
-      @history_limit = opts[:history_limit] || 15
+      @history_limit = opts[:history_limit] || (@build_units.to_i * 3)
+      @additional_artifacts_to_merge = opts[:additional_artifacts_to_merge] || []
     end
 
     def push_partial(opts = {})
@@ -49,6 +53,13 @@ module SimpleCov
         result = SimpleCov::ResultMerger.merged_result
         data_to_push = result.original_result.merge("BUILD_UNIT" => @build_unit).to_json
         put_file("#{@project_name}-#{commit_time}-coverageJSON/#{hashed_build_id}/#{@job_id}", data_to_push)
+        @additional_artifacts_to_merge.each do |artifact|
+          key = artifact[:key]
+          file = artifact[:file]
+          filedata = File.read(file)
+          puts "pushing additional artifact #{key} #{file} #{filedata[0,100]}"
+          put_file("#{@project_name}-#{commit_time}-#{key}/#{hashed_build_id}/#{@job_id}", filedata)
+        end
       rescue => e
         puts e.inspect
         puts e.backtrace
@@ -84,7 +95,28 @@ module SimpleCov
         merged = result.original_result.merge_resultset(merged)
       end
       result = SimpleCov::Result.new(merged)
-      push_coverage_to("#{@project_name}-#{Time.now.to_i}-coverageRESULT/#{SecureRandom.urlsafe_base64(33)}", gen_body(result), result.covered_percent, @postback_url)
+      uniq_id = SecureRandom.urlsafe_base64(33)
+      push_coverage_to("#{@project_name}-#{Time.now.to_i}-coverageRESULT/#{uniq_id}", gen_body(result), result.covered_percent, @postback_url)
+      @additional_artifacts_to_merge.each do |artifact|
+        key = artifact[:key]
+        file = artifact[:file]
+        merge_with = artifact[:merge_with]
+        files = files_for_key(key).map do |f|
+          data = f.body
+          puts "merging additional artifact #{f.key} #{data[0,100]}"
+          data
+        end
+        while files.size > 1
+          a, b, *files = files
+          files << merge_with.call(a, b)
+        end
+        File.open(file, "w+"){|f| f.write(files.first)}
+        puts "Merged artifact #{key} contents:"
+        puts files.first
+        save_merged_artifact_in_s3_at = "#{@project_name}-#{Time.now.to_i}-#{key}/#{uniq_id}"
+        puts "Also saving in S3 at path: #{save_merged_artifact_in_s3_at}"
+        put_file(save_merged_artifact_in_s3_at, files.first)
+      end
       cleanup_files
     end
 
@@ -112,9 +144,13 @@ module SimpleCov
       @connection.directories.get(@bucket_name).files.create(:key => path, :body => data, :content_type => "text/html")
     end
 
-    def json_files
-      expected_dir = "#{@project_name}-#{commit_time}-coverageJSON/#{hashed_build_id}/"
+    def files_for_key(key)
+      expected_dir = "#{@project_name}-#{commit_time}-#{key}/#{hashed_build_id}/"
       @connection.directories.get(@bucket_name, :prefix => expected_dir).files
+    end
+
+    def json_files
+      files_for_key("coverageJSON")
     end
 
     def gen_body(result)
